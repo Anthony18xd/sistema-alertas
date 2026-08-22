@@ -1,0 +1,12 @@
+# Archivos sensibles — NUNCA subir al repositorio
+config/database.php
+config/security.php
+logs/
+data/
+*.log
+*.db
+.env
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
