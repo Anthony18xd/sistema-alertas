@@ -39,7 +39,14 @@
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
                 <span><?php echo htmlspecialchars($_SESSION['username'] ?? ''); ?></span>
+                <?php if (($_SESSION['user_admin'] ?? false) === true): ?>
+                    <span class="badge-admin">admin</span>
+                <?php endif; ?>
             </div>
+            <a href="cuenta.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) === 'cuenta.php' ? 'active' : ''; ?>">
+                <i class="fas fa-key"></i>
+                <span>Mi cuenta</span>
+            </a>
             <a href="../logout.php" class="nav-item">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Cerrar sesión</span>

@@ -123,24 +123,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($username === '' || $password === '') {
                 $error = 'Todos los campos son obligatorios';
             } else {
-                $stmt = $pdo->prepare('SELECT id, username, password_hash FROM usuarios WHERE username = :username');
+                $stmt = $pdo->prepare('SELECT id, username, password_hash, rol, activo FROM usuarios WHERE username = :username');
                 $stmt->execute([':username' => $username]);
                 $user = $stmt->fetch();
 
                 if ($user && password_verify($password, $user['password_hash'])) {
-                    // Login exitoso — limpiar intentos
-                    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-                    $file = getDataDir() . '/login_' . md5($ip) . '.json';
-                    if (file_exists($file)) unlink($file);
+                    if (!$user['activo']) {
+                        $error = 'Tu cuenta está desactivada. Contacta al administrador.';
+                    } else {
+                        // Login exitoso — limpiar intentos
+                        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+                        $file = getDataDir() . '/login_' . md5($ip) . '.json';
+                        if (file_exists($file)) unlink($file);
 
-                    // Regenerar sesión
-                    session_regenerate_id(true);
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                        // Regenerar sesión
+                        session_regenerate_id(true);
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['rol'] = $user['rol'];
+                        $_SESSION['user_admin'] = ($user['rol'] === 'admin');
+                        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
                     header('Location: /views/dashboard.php');
-                    exit;
+                        exit;
+                    }
                 } else {
                     recordLoginAttempt();
                     $attempts = getLoginAttempts();

@@ -48,6 +48,8 @@ try {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username VARCHAR(50) NOT NULL UNIQUE,
             password_hash VARCHAR(255) NOT NULL,
+            rol VARCHAR(20) DEFAULT 'operador' NOT NULL,
+            activo INTEGER DEFAULT 1 NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
@@ -83,8 +85,8 @@ try {
 
     // ── Datos iniciales ──────────────────────────────────────
     // Usuario admin por defecto (contraseña: password) — CAMBIAR EN PRODUCCIÓN
-    $pdo->prepare('INSERT INTO usuarios (username, password_hash) VALUES (?, ?)')
-        ->execute(['admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi']);
+    $pdo->prepare('INSERT INTO usuarios (username, password_hash, rol) VALUES (?, ?, ?)')
+        ->execute(['admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin']);
 
     // API Key inicial para el proyecto
     $pdo->prepare('INSERT INTO api_keys (api_key, nombre_dispositivo, activa) VALUES (?, ?, 1)')
