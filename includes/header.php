@@ -3,11 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $titulo ?? 'ALERTA'; ?> — ALERTA</title>
+    <title><?php echo $titulo ?? ($APLICACION['nombre_sistema'] ?? 'ALERTA'); ?> — <?php echo htmlspecialchars($APLICACION['nombre_sistema'] ?? 'ALERTA'); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/style.css">
     <?php if (isset($extra_css)) echo $extra_css; ?>
+    <script>
+    window.PANEL_PREF = {
+        sonido: <?php echo (($_SESSION['pref']['sonido'] ?? true) ? 'true' : 'false'); ?>,
+        intervalo: <?php echo (int)($_SESSION['pref']['intervalo'] ?? 30); ?>
+    };
+    </script>
 </head>
 <body>
 
@@ -15,7 +21,7 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon"><img src="../assets/img/icono.png" alt="ALERTA"></div>
-            <span class="brand-text">ALERTA</span>
+            <span class="brand-text"><?php echo htmlspecialchars($APLICACION['nombre_sistema'] ?? 'ALERTA'); ?></span>
         </div>
         <nav class="sidebar-nav">
             <a href="dashboard.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : ''; ?>">
@@ -30,10 +36,24 @@
                 <i class="fas fa-list"></i>
                 <span>Alertas</span>
             </a>
+            <a href="estado_dispositivos.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) === 'estado_dispositivos.php' ? 'active' : ''; ?>">
+                <i class="fas fa-satellite-dish"></i>
+                <span>Dispositivos</span>
+            </a>
             <a href="usuarios.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) === 'usuarios.php' ? 'active' : ''; ?>">
                 <i class="fas fa-users"></i>
                 <span>Usuarios</span>
             </a>
+            <?php if (($_SESSION['user_admin'] ?? false) === true): ?>
+                <a href="bitacora.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) === 'bitacora.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-history"></i>
+                    <span>Bitácora</span>
+                </a>
+                <a href="configuracion.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) === 'configuracion.php' ? 'active' : ''; ?>">
+                    <i class="fas fa-cog"></i>
+                    <span>Configuración</span>
+                </a>
+            <?php endif; ?>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">

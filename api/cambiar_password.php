@@ -9,6 +9,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/actividad.php';
 
 // ── Validar CSRF ──────────────────────────────────────────
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -66,6 +67,7 @@ try {
 
     session_regenerate_id(true);
 
+    registrarActividad('password_cambio', 'Contraseña propia actualizada');
     echo json_encode(['success' => true, 'mensaje' => 'Contraseña actualizada correctamente.']);
 } catch (PDOException $e) {
     $logDir = __DIR__ . '/../logs';

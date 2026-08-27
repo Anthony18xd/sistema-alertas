@@ -47,14 +47,26 @@ if (!in_array($status, ['pendiente', 'completado'])) {
 // ── Actualizar ────────────────────────────────────────────
 try {
     require_once __DIR__ . '/../config/database.php';
+    require_once __DIR__ . '/../includes/actividad.php';
 
-    $stmt = $pdo->prepare("UPDATE alertas SET status = :status WHERE id = :id");
-    $stmt->execute([':status' => $status, ':id' => $id]);
+    $stmt = $pdo->prepare("UPDATE alertas SET status = :status, completado_por = :completado_por WHERE id = :id");
+    $completado_por = $status === 'completado' ? ($_SESSION['username'] ?? '') : null;
+    $stmt->execute([
+        ':status' => $status,
+        ':completado_por' => $completado_por,
+        ':id' => $id
+    ]);
 
     if ($stmt->rowCount() === 0) {
         http_response_code(404);
         echo json_encode(['error' => 'Alerta no encontrada']);
         exit;
+    }
+
+    if ($status === 'completado') {
+        registrarActividad('alerta_completada', "Alerta #{$id}");
+    } else {
+        registrarActividad('alerta_reabierta', "Alerta #{$id}");
     }
 
     echo json_encode([

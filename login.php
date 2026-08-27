@@ -14,6 +14,7 @@ if (isset($_SESSION['user_id'])) {
 }
 
 require_once __DIR__ . '/config/security.php';
+require_once __DIR__ . '/includes/actividad.php';
 
 // ── Directorio de datos para brute force ──────────────────
 function getDataDir(): string {
@@ -144,10 +145,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['user_admin'] = ($user['rol'] === 'admin');
                         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
-                    header('Location: /views/dashboard.php');
+                        registrarActividad('login', 'Inicio de sesión');
+                        header('Location: /views/dashboard.php');
                         exit;
                     }
                 } else {
+                    registrarActividad('login_fallido', 'Usuario: ' . substr($username, 0, 50));
                     recordLoginAttempt();
                     $attempts = getLoginAttempts();
                     global $LOGIN_MAX_ATTEMPTS;

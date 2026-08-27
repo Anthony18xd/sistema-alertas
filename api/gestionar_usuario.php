@@ -9,6 +9,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/actividad.php';
 
 if (!esAdmin()) {
     http_response_code(403);
@@ -95,6 +96,7 @@ try {
                 ':r' => $rol,
             ]);
 
+            registrarActividad('usuario_creado', "Usuario: {$username}, rol: {$rol}");
             echo json_encode(['success' => true, 'mensaje' => "Usuario '{$username}' creado correctamente."]);
             break;
 
@@ -133,6 +135,7 @@ try {
             $stmt->execute([':u' => $username, ':r' => $rol, ':id' => $id]);
 
             if ($stmt->rowCount() > 0) {
+                registrarActividad('usuario_editado', "ID: {$id}, usuario: {$username}, rol: {$rol}");
                 echo json_encode(['success' => true, 'mensaje' => 'Usuario actualizado correctamente.']);
             } else {
                 http_response_code(404);
@@ -177,6 +180,7 @@ try {
             $stmt->execute([':a' => $activo, ':id' => $id]);
 
             if ($stmt->rowCount() > 0) {
+                registrarActividad($activo ? 'usuario_activo' : 'usuario_inactivo', "ID: {$id}");
                 $mensaje = $activo ? 'Usuario activado correctamente.' : 'Usuario desactivado correctamente.';
                 echo json_encode(['success' => true, 'mensaje' => $mensaje]);
             } else {
@@ -219,6 +223,7 @@ try {
             $stmt = $pdo->prepare('DELETE FROM usuarios WHERE id = :id');
             $stmt->execute([':id' => $id]);
 
+            registrarActividad('usuario_eliminado', 'ID: ' . $id . ' (' . ($objetivo['rol'] ?? '?') . ')');
             echo json_encode(['success' => true, 'mensaje' => 'Usuario eliminado correctamente.']);
             break;
 
@@ -242,6 +247,7 @@ try {
             $stmt->execute([':p' => password_hash($password, PASSWORD_BCRYPT), ':id' => $id]);
 
             if ($stmt->rowCount() > 0) {
+                registrarActividad('reset_password', 'ID: ' . $id);
                 echo json_encode(['success' => true, 'mensaje' => 'Contraseña restablecida correctamente.']);
             } else {
                 http_response_code(404);

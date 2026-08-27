@@ -37,6 +37,10 @@ Options -Indexes
     Require all denied
 </Directory>
 
+<Directory "backups">
+    Require all denied
+</Directory>
+
 <Directory "dev">
     Require all denied
 </Directory>

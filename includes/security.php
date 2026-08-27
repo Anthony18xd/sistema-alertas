@@ -58,10 +58,25 @@ function checkRateLimit(): void {
         }
     }
 
-    // Rate limit por IP (anónimo) o por API key (autenticado)
-    $rateKey = $hasValidKey ? 'key_' . md5($apiKey) : 'ip_' . md5($ip);
+    // Usuarios del panel con sesión iniciada cuentan como "autenticados"
+    $isWebSession = false;
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+        $isWebSession = true;
+    }
+
+    // Rate limit por IP/API key (anónimo) o por usuario autenticado
+    if ($hasValidKey) {
+        $rateKey = 'key_' . md5($apiKey);
+    } elseif ($isWebSession) {
+        $rateKey = 'user_' . md5('u' . (int)$_SESSION['user_id'] . '_' . $ip);
+    } else {
+        $rateKey = 'ip_' . md5($ip);
+    }
     $rateFile = $dataDir . '/rate_' . $rateKey . '.json';
-    $maxRequests = $hasValidKey ? $RATE_LIMIT_AUTH_MAX : $RATE_LIMIT_ANON_MAX;
+    $maxRequests = ($hasValidKey || $isWebSession) ? $RATE_LIMIT_AUTH_MAX : $RATE_LIMIT_ANON_MAX;
 
     $data = [];
     if (file_exists($rateFile)) {
@@ -159,8 +174,9 @@ function validateApiKey(): array {
 
         if ($keyData) {
             // Actualizar last_used_at (solo cada 5 minutos para reducir writes)
-            $fiveMinAgo = date('Y-m-d H:i:s', time() - 300);
-            $update = $pdo->prepare('UPDATE api_keys SET last_used_at = NOW() WHERE id = :id AND (last_used_at IS NULL OR last_used_at < :five_min_ago)');
+            $fiveMinAgo  = date('Y-m-d H:i:s', time() - 300);
+            $nowFunc     = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') ? 'NOW()' : "strftime('%Y-%m-%d %H:%M:%S', 'now')";
+            $update = $pdo->prepare("UPDATE api_keys SET last_used_at = {$nowFunc} WHERE id = :id AND (last_used_at IS NULL OR last_used_at < :five_min_ago)");
             $update->execute([':id' => $keyData['id'], ':five_min_ago' => $fiveMinAgo]);
             return $keyData;
         }

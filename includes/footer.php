@@ -4,6 +4,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+var PANEL_PREF = window.PANEL_PREF || { sonido: true, intervalo: 30 };
 var notifUltimoId = 0;
 var notifInterval = null;
 var notifAudioCtx = null;
@@ -21,6 +22,7 @@ document.addEventListener('click', initAudio, { once: true });
 document.addEventListener('touchstart', initAudio, { once: true });
 
 function playNotifSound() {
+    if (!PANEL_PREF.sonido) return;
     try {
         initAudio();
         if (!notifAudioCtx || notifAudioCtx.state === 'suspended') return;
@@ -112,7 +114,7 @@ function escapeHtml(text) {
 
 document.addEventListener('DOMContentLoaded', function () {
     actualizarNotificaciones();
-    notifInterval = setInterval(actualizarNotificaciones, 30000);
+    notifInterval = setInterval(actualizarNotificaciones, PANEL_PREF.intervalo * 1000);
 });
 </script>
 <?php if (isset($extra_js)) echo $extra_js; ?>

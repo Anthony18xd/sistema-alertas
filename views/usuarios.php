@@ -11,6 +11,8 @@ $usuarios = $pdo->query('SELECT id, username, rol, activo, created_at FROM usuar
 // ── Dispositivos con API key ──────────────────────────────
 $dispositivos = $pdo->query('SELECT id, nombre_dispositivo, api_key, activa, created_at, last_used_at FROM api_keys ORDER BY id')->fetchAll();
 
+$tiempoLimite = time() - 120; // 2 minutos sin reportar = "sin conexión"
+
 include __DIR__ . '/../includes/header.php';
 $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
 ?>
@@ -86,35 +88,62 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
         </div>
     </div>
 
+    <?php if ($esAdmin): ?>
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="fas fa-key"></i> Dispositivos (API Keys)</span>
-                <form method="post" action="../api/generate_key.php" class="d-flex gap-2" id="formKey">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
-                    <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Nombre del dispositivo" required maxlength="150">
-                    <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i></button>
-                </form>
+                <button class="btn btn-sm btn-primary" id="btnNuevaKey"><i class="fas fa-plus"></i> Nueva key</button>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead>
-                        <tr><th>Dispositivo</th><th>Key</th><th>Estado</th><th>Último uso</th></tr>
+                        <tr>
+                            <th>Dispositivo</th><th>Key</th><th>Conexión</th><th>Estado</th><th>Último uso</th>
+                            <?php if ($esAdmin): ?><th>Acciones</th><?php endif; ?>
+                        </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($dispositivos)): ?>
-                            <tr><td colspan="4" class="text-center text-muted py-4">No hay dispositivos registrados</td></tr>
+                            <tr><td colspan="<?php echo $esAdmin ? 6 : 5; ?>" class="text-center text-muted py-4">No hay dispositivos registrados</td></tr>
                         <?php else: ?>
-                            <?php foreach ($dispositivos as $d): ?>
+                            <?php foreach ($dispositivos as $d):
+                                $online = $d['last_used_at'] && strtotime($d['last_used_at']) > $tiempoLimite;
+                            ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($d['nombre_dispositivo']); ?></td>
-                                    <td><code title="<?php echo htmlspecialchars($d['api_key']); ?>"><?php echo htmlspecialchars(substr($d['api_key'], 0, 12)); ?>…</code></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <code title="<?php echo htmlspecialchars($d['api_key']); ?>"><?php echo htmlspecialchars(substr($d['api_key'], 0, 12)); ?>…</code>
+                                            <button class="btn btn-sm btn-outline-secondary btn-copiar-key" data-key="<?php echo htmlspecialchars($d['api_key'], ENT_QUOTES); ?>" title="Copiar key completa">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo $online ? 'bg-success' : 'bg-danger'; ?>">
+                                            <i class="fas fa-<?php echo $online ? 'wifi' : 'exclamation-circle'; ?>"></i>
+                                            <?php echo $online ? 'en línea' : 'sin conexión'; ?>
+                                        </span>
+                                    </td>
                                     <td>
                                         <span class="badge <?php echo $d['activa'] ? 'bg-success' : 'bg-secondary'; ?>">
                                             <?php echo $d['activa'] ? 'activa' : 'inactiva'; ?>
                                         </span>
                                     </td>
                                     <td><?php echo htmlspecialchars($d['last_used_at'] ?? 'nunca'); ?></td>
+                                    <?php if ($esAdmin): ?>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <button class="btn btn-sm <?php echo $d['activa'] ? 'btn-outline-warning' : 'btn-outline-success'; ?> btn-key-activo" data-id="<?php echo (int)$d['id']; ?>" data-nombre="<?php echo htmlspecialchars($d['nombre_dispositivo']); ?>" data-activa="<?php echo (int)$d['activa']; ?>" title="<?php echo $d['activa'] ? 'Desactivar' : 'Activar'; ?>">
+                                                    <i class="fas fa-<?php echo $d['activa'] ? 'ban' : 'check'; ?>"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger btn-key-eliminar" data-id="<?php echo (int)$d['id']; ?>" data-nombre="<?php echo htmlspecialchars($d['nombre_dispositivo']); ?>" title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -123,6 +152,7 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <?php if ($esAdmin): ?>
@@ -201,17 +231,72 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
         </div>
     </div>
 </div>
+
+<!-- ── Modal Nueva API Key ───────────────────────────────── -->
+<div class="modal fade" id="modalKey" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formKey">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva API Key</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf; ?>">
+                    <div id="msgKey"></div>
+                    <div class="mb-3" id="campoNombreKey">
+                        <label for="nKey" class="form-label">Nombre del dispositivo</label>
+                        <input type="text" class="form-control" id="nKey" name="nombre" maxlength="150" placeholder="ej. Radiotaxi Centro">
+                    </div>
+                    <div id="resultadoKey" style="display:none;">
+                        <label class="form-label">API Key (cópiala ahora, no se vuelve a mostrar)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="keyGenerada" readonly>
+                            <button type="button" class="btn btn-outline-primary" id="btnCopiarGenerada"><i class="fas fa-copy"></i> Copiar</button>
+                        </div>
+                        <div class="form-text mt-2">Envíala en el encabezado <code>X-API-Key</code> desde la app.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGenerarKey">Generar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <?php endif; ?>
 
 <?php
 $js = '';
+
 if ($esAdmin) {
-$js = <<<'HTML'
+$js .= <<<'HTML'
+
+function copiarTexto(texto, okFn) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(texto).then(okFn).catch(function () { fallbackCopiar(texto, okFn); });
+    } else {
+        fallbackCopiar(texto, okFn);
+    }
+}
+function fallbackCopiar(texto, okFn) {
+    var ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); okFn(); } catch (e) {}
+    document.body.removeChild(ta);
+}
 
 var modalUsuarioEl = document.getElementById('modalUsuario');
 var modalUsuario = bootstrap.Modal.getOrCreateInstance(modalUsuarioEl);
 var modalResetEl = document.getElementById('modalReset');
 var modalReset = bootstrap.Modal.getOrCreateInstance(modalResetEl);
+var modalKeyEl = document.getElementById('modalKey');
+var modalKey = bootstrap.Modal.getOrCreateInstance(modalKeyEl);
 
 function msjUsuario(tipo, texto) {
     document.getElementById('msgUsuario').innerHTML = '<div class="alert alert-' + tipo + '">' + texto + '</div>';
@@ -219,16 +304,20 @@ function msjUsuario(tipo, texto) {
 function msjReset(tipo, texto) {
     document.getElementById('msgReset').innerHTML = '<div class="alert alert-' + tipo + '">' + texto + '</div>';
 }
+function msjKey(tipo, texto) {
+    document.getElementById('msgKey').innerHTML = '<div class="alert alert-' + tipo + '">' + texto + '</div>';
+}
 
-function postApi(body) {
-    return fetch('../api/gestionar_usuario.php', {
+function postApi(url, body) {
+    return fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     }).then(function (r) { return r.json(); });
 }
+var csrfToken = document.querySelector('#formUsuario input[name=csrf_token]').value || document.querySelector('#formKey input[name=csrf_token]').value;
 
-// ── Agregar (abrir modal en modo crear) ───────────────────
+// ── Usuarios: agregar/editar ──────────────────────────────
 document.getElementById('btnNuevoUsuario').addEventListener('click', function () {
     document.getElementById('modalUsuarioTitulo').textContent = 'Agregar usuario';
     document.getElementById('uId').value = '';
@@ -236,7 +325,6 @@ document.getElementById('btnNuevoUsuario').addEventListener('click', function ()
     document.getElementById('uRol').value = 'operador';
     document.getElementById('uPassword').value = '';
     document.getElementById('uPassword2').value = '';
-    document.getElementById('uUsername').disabled = false;
     document.getElementById('campoPassword').style.display = '';
     document.getElementById('campoConfirmar').style.display = '';
     document.getElementById('uPassword').required = true;
@@ -245,7 +333,6 @@ document.getElementById('btnNuevoUsuario').addEventListener('click', function ()
     modalUsuario.show();
 });
 
-// ── Editar (abrir modal en modo edición) ──────────────────
 document.querySelectorAll('.btn-editar').forEach(function (btn) {
     btn.addEventListener('click', function () {
         document.getElementById('modalUsuarioTitulo').textContent = 'Editar usuario';
@@ -254,7 +341,6 @@ document.querySelectorAll('.btn-editar').forEach(function (btn) {
         document.getElementById('uRol').value = btn.dataset.rol;
         document.getElementById('uPassword').value = '';
         document.getElementById('uPassword2').value = '';
-        document.getElementById('uUsername').disabled = false;
         document.getElementById('campoPassword').style.display = 'none';
         document.getElementById('campoConfirmar').style.display = 'none';
         document.getElementById('uPassword').required = false;
@@ -264,7 +350,6 @@ document.querySelectorAll('.btn-editar').forEach(function (btn) {
     });
 });
 
-// ── Guardar (crear o editar) ──────────────────────────────
 document.getElementById('formUsuario').addEventListener('submit', function (e) {
     e.preventDefault();
     var id = document.getElementById('uId').value;
@@ -289,13 +374,13 @@ document.getElementById('formUsuario').addEventListener('submit', function (e) {
     if (id) { body.id = parseInt(id, 10); }
     else { body.password = p1; }
 
-    postApi(body).then(function (res) {
+    postApi('../api/gestionar_usuario.php', body).then(function (res) {
         if (res.success) { location.reload(); }
         else { msjUsuario('danger', res.error || 'Error al guardar.'); }
     }).catch(function () { msjUsuario('danger', 'Error de conexión.'); });
 });
 
-// ── Reset de contraseña ───────────────────────────────────
+// ── Usuarios: reset / activo / eliminar ───────────────────
 document.querySelectorAll('.btn-reset').forEach(function (btn) {
     btn.addEventListener('click', function () {
         document.getElementById('rId').value = btn.dataset.id;
@@ -311,17 +396,10 @@ document.getElementById('formReset').addEventListener('submit', function (e) {
     e.preventDefault();
     var p1 = document.getElementById('rPassword').value;
     var p2 = document.getElementById('rPassword2').value;
+    if (p1 !== p2) { msjReset('danger', 'Las contraseñas no coinciden.'); return; }
+    if (p1.length < 8) { msjReset('danger', 'La contraseña debe tener mínimo 8 caracteres.'); return; }
 
-    if (p1 !== p2) {
-        msjReset('danger', 'Las contraseñas no coinciden.');
-        return;
-    }
-    if (p1.length < 8) {
-        msjReset('danger', 'La contraseña debe tener mínimo 8 caracteres.');
-        return;
-    }
-
-    postApi({
+    postApi('../api/gestionar_usuario.php', {
         csrf_token: e.target.csrf_token.value,
         accion: 'reset_password',
         id: parseInt(document.getElementById('rId').value, 10),
@@ -332,14 +410,13 @@ document.getElementById('formReset').addEventListener('submit', function (e) {
     }).catch(function () { msjReset('danger', 'Error de conexión.'); });
 });
 
-// ── Activar / Desactivar ──────────────────────────────────
 document.querySelectorAll('.btn-activo').forEach(function (btn) {
     btn.addEventListener('click', function () {
         var activo = btn.dataset.activo === '1';
         var accion = activo ? 'desactivar' : 'activar';
         if (!confirm('¿' + accion.charAt(0).toUpperCase() + accion.slice(1) + ' a "' + btn.dataset.usuario + '"?')) return;
-        postApi({
-            csrf_token: document.querySelector('#formUsuario input[name=csrf_token]').value,
+        postApi('../api/gestionar_usuario.php', {
+            csrf_token: csrfToken,
             accion: 'activo',
             id: parseInt(btn.dataset.id, 10),
             activo: activo ? 0 : 1
@@ -350,12 +427,93 @@ document.querySelectorAll('.btn-activo').forEach(function (btn) {
     });
 });
 
-// ── Eliminar ──────────────────────────────────────────────
 document.querySelectorAll('.btn-eliminar').forEach(function (btn) {
     btn.addEventListener('click', function () {
         if (!confirm('¿Eliminar definitivamente a "' + btn.dataset.usuario + '"?')) return;
-        postApi({
-            csrf_token: document.querySelector('#formUsuario input[name=csrf_token]').value,
+        postApi('../api/gestionar_usuario.php', {
+            csrf_token: csrfToken,
+            accion: 'eliminar',
+            id: parseInt(btn.dataset.id, 10)
+        }).then(function (res) {
+            if (res.success) { location.reload(); }
+            else { alert(res.error || 'Error al eliminar.'); }
+        }).catch(function () { alert('Error de conexión.'); });
+    });
+});
+
+// ── Copiar key completa ───────────────────────────────────
+document.querySelectorAll('.btn-copiar-key').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        copiarTexto(btn.dataset.key, function () {
+            var icon = btn.querySelector('i');
+            icon.className = 'fas fa-check';
+            setTimeout(function () { icon.className = 'fas fa-copy'; }, 1200);
+        });
+    });
+});
+
+// ── API Keys: nueva / activar / eliminar ──────────────────
+document.getElementById('btnNuevaKey').addEventListener('click', function () {
+    document.getElementById('formKey').reset();
+    document.getElementById('campoNombreKey').style.display = '';
+    document.getElementById('resultadoKey').style.display = 'none';
+    document.getElementById('btnGenerarKey').style.display = '';
+    document.getElementById('msgKey').innerHTML = '';
+    modalKey.show();
+});
+
+document.getElementById('formKey').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var nombre = document.getElementById('nKey').value;
+    if (nombre.length < 2) { msjKey('danger', 'El nombre debe tener al menos 2 caracteres.'); return; }
+
+    postApi('../api/gestionar_key.php', {
+        csrf_token: e.target.csrf_token.value,
+        accion: 'crear',
+        nombre: nombre
+    }).then(function (res) {
+        if (res.success) {
+            document.getElementById('keyGenerada').value = res.api_key;
+            document.getElementById('campoNombreKey').style.display = 'none';
+            document.getElementById('resultadoKey').style.display = '';
+            document.getElementById('btnGenerarKey').style.display = 'none';
+            msjKey('success', '<i class="fas fa-check-circle"></i> ' + (res.mensaje || 'Key generada.'));
+        } else {
+            msjKey('danger', res.error || 'Error al generar.');
+        }
+    }).catch(function () { msjKey('danger', 'Error de conexión.'); });
+});
+
+document.getElementById('btnCopiarGenerada').addEventListener('click', function () {
+    var key = document.getElementById('keyGenerada').value;
+    copiarTexto(key, function () {
+        document.getElementById('btnCopiarGenerada').innerHTML = '<i class="fas fa-check"></i> Copiada';
+        setTimeout(function () { document.getElementById('btnCopiarGenerada').innerHTML = '<i class="fas fa-copy"></i> Copiar'; }, 1500);
+    });
+});
+
+document.querySelectorAll('.btn-key-activo').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var activa = btn.dataset.activa === '1';
+        var accion = activa ? 'desactivar' : 'activar';
+        if (!confirm('¿' + accion.charAt(0).toUpperCase() + accion.slice(1) + ' el dispositivo "' + btn.dataset.nombre + '"?')) return;
+        postApi('../api/gestionar_key.php', {
+            csrf_token: csrfToken,
+            accion: 'activo',
+            id: parseInt(btn.dataset.id, 10),
+            activo: activa ? 0 : 1
+        }).then(function (res) {
+            if (res.success) { location.reload(); }
+            else { alert(res.error || 'Error al cambiar el estado.'); }
+        }).catch(function () { alert('Error de conexión.'); });
+    });
+});
+
+document.querySelectorAll('.btn-key-eliminar').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        if (!confirm('¿Eliminar el dispositivo "' + btn.dataset.nombre + '"? La app dejará de reportar.')) return;
+        postApi('../api/gestionar_key.php', {
+            csrf_token: csrfToken,
             accion: 'eliminar',
             id: parseInt(btn.dataset.id, 10)
         }).then(function (res) {

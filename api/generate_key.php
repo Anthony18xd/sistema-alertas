@@ -7,14 +7,15 @@
 
 session_start();
 require_once __DIR__ . '/../config/security.php';
+require_once __DIR__ . '/../includes/auth.php';
 
 // ── Solo CLI o admin autenticado ──────────────────────────
 $isCLI = php_sapi_name() === 'cli';
 
-if (!$isCLI && !isset($_SESSION['user_id'])) {
+if (!$isCLI && !esAdmin()) {
     http_response_code(403);
     header('Content-Type: application/json');
-    echo json_encode(['error' => 'Acceso denegado. Inicia sesión como administrador.']);
+    echo json_encode(['error' => 'Acceso denegado. Solo el administrador puede generar API Keys.']);
     exit;
 }
 

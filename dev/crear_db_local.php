@@ -50,6 +50,7 @@ try {
             password_hash VARCHAR(255) NOT NULL,
             rol VARCHAR(20) DEFAULT 'operador' NOT NULL,
             activo INTEGER DEFAULT 1 NOT NULL,
+            preferencias TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
@@ -64,6 +65,8 @@ try {
             latitud DECIMAL(10, 7) NOT NULL,
             longitud DECIMAL(10, 7) NOT NULL,
             status VARCHAR(20) DEFAULT 'pendiente' NOT NULL,
+            nota TEXT NULL,
+            completado_por VARCHAR(50) NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
@@ -83,6 +86,25 @@ try {
         )
     ");
 
+    $pdo->exec("
+        CREATE TABLE logs_actividad (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NULL DEFAULT NULL,
+            username VARCHAR(50) NOT NULL DEFAULT '',
+            accion VARCHAR(100) NOT NULL,
+            detalle VARCHAR(255) NOT NULL DEFAULT '',
+            ip VARCHAR(45) NOT NULL DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE configuracion (
+            clave VARCHAR(50) PRIMARY KEY,
+            valor TEXT NOT NULL
+        )
+    ");
+
     // ── Datos iniciales ──────────────────────────────────────
     // Usuario admin por defecto (contraseña: password) — CAMBIAR EN PRODUCCIÓN
     $pdo->prepare('INSERT INTO usuarios (username, password_hash, rol) VALUES (?, ?, ?)')
@@ -92,11 +114,15 @@ try {
     $pdo->prepare('INSERT INTO api_keys (api_key, nombre_dispositivo, activa) VALUES (?, ?, 1)')
         ->execute(['alerta_muni_2026_xK9mP2vL8nQ4wR7jT3yH6bC5fD1gE0sA', 'App Android ALERTA']);
 
+    // Configuración global por defecto
+    $pdo->prepare("INSERT INTO configuracion (clave, valor) VALUES ('nombre_sistema', 'ALERTA')")
+        ->execute();
+
     echo "═══════════════════════════════════════════════\n";
     echo "  Base de datos local creada correctamente\n";
     echo "═══════════════════════════════════════════════\n";
     echo "  Archivo:   $dbPath\n";
-    echo "  Tablas:    usuarios, alertas, api_keys\n";
+    echo "  Tablas:    usuarios, alertas, api_keys, logs_actividad, configuracion\n";
     echo "  Usuario:   admin / password (cámbiala)\n";
     echo "\n  Siguiente paso:\n";
     echo "    php dev/simular_alerta.php 5\n\n";

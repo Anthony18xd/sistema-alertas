@@ -3,6 +3,7 @@ config/database.php
 config/security.php
 logs/
 data/
+backups/
 *.log
 *.db
 .env
