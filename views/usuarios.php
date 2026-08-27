@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/database.php';
 
 $titulo = 'Usuarios y dispositivos';
 $esAdmin = esAdmin();
+$esRoot  = esRoot();
 
 // ── Usuarios del panel ────────────────────────────────────
 $usuarios = $pdo->query('SELECT id, username, rol, activo, created_at FROM usuarios ORDER BY id')->fetchAll();
@@ -49,7 +50,7 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
                                         <?php if ($esMismo): ?><span class="badge bg-info text-dark ms-1">tú</span><?php endif; ?>
                                     </td>
                                     <td>
-                                        <span class="badge <?php echo $u['rol'] === 'admin' ? 'bg-warning' : 'bg-secondary'; ?>">
+                                        <span class="badge <?php echo $u['rol'] === 'root' ? 'bg-danger' : ($u['rol'] === 'admin' ? 'bg-warning' : 'bg-secondary'); ?>">
                                             <?php echo htmlspecialchars($u['rol']); ?>
                                         </span>
                                     </td>
@@ -59,7 +60,7 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
                                         </span>
                                     </td>
                                     <td><?php echo htmlspecialchars($u['created_at']); ?></td>
-                                    <?php if ($esAdmin): ?>
+                                    <?php if ($esAdmin && ($u['rol'] !== 'root' || $esRoot)): ?>
                                         <td>
                                             <?php if (!$esMismo): ?>
                                                 <div class="d-flex gap-1">
@@ -179,6 +180,9 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
                         <select class="form-select" id="uRol" name="rol">
                             <option value="operador">Operador (solo consulta)</option>
                             <option value="admin">Administrador (control total)</option>
+                            <?php if ($esRoot): ?>
+                            <option value="root">Superadministrador (root - gestiona alertas)</option>
+                            <?php endif; ?>
                         </select>
                     </div>
                     <div class="mb-3" id="campoPassword">

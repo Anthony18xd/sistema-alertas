@@ -2,8 +2,8 @@
 require_once __DIR__ . '/../includes/auth.php';
 
 $titulo = 'Mapa de alertas';
-$extra_css = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">';
-$extra_js = '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="../assets/js/mapa.js"></script>';
+$extra_css = '<link rel="stylesheet" href="/assets/lib/leaflet/leaflet.css">';
+$extra_js = '<script src="/assets/lib/leaflet/leaflet.js"></script><script src="/assets/js/mapa.js"></script>';
 
 include __DIR__ . '/../includes/header.php';
 ?>

@@ -18,7 +18,7 @@ $total_dispositivos = (int)$pdo->query('SELECT COUNT(DISTINCT dispositivo) AS c 
 $stmt = $pdo->query('SELECT id, dispositivo, numero, bateria, fecha_hora, status FROM alertas ORDER BY id DESC LIMIT 10');
 $recientes = $stmt->fetchAll();
 
-$extra_js = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>';
+$extra_js = '<script src="/assets/lib/chartjs/chart.umd.min.js"></script>';
 
 include __DIR__ . '/../includes/header.php';
 ?>

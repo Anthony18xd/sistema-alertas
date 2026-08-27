@@ -142,7 +142,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['user_id'] = $user['id'];
                         $_SESSION['username'] = $user['username'];
                         $_SESSION['rol'] = $user['rol'];
-                        $_SESSION['user_admin'] = ($user['rol'] === 'admin');
+                        $_SESSION['user_admin'] = ($user['rol'] === 'admin' || $user['rol'] === 'root');
+                        $_SESSION['user_root']  = ($user['rol'] === 'root');
                         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
                         registrarActividad('login', 'Inicio de sesión');
@@ -178,9 +179,9 @@ $_SESSION['csrf_token'] = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(32));
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión — ALERTA</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="/assets/lib/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/lib/fontawesome/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body class="login-page">
     <div class="container d-flex align-items-center justify-content-center min-vh-100">

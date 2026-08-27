@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $titulo ?? ($APLICACION['nombre_sistema'] ?? 'ALERTA'); ?> — <?php echo htmlspecialchars($APLICACION['nombre_sistema'] ?? 'ALERTA'); ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link href="/assets/lib/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/lib/fontawesome/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
     <?php if (isset($extra_css)) echo $extra_css; ?>
     <script>
     window.PANEL_PREF = {

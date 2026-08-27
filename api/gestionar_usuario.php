@@ -65,9 +65,14 @@ try {
             $rol      = $input['rol'] ?? 'operador';
             $password = $input['password'] ?? '';
 
-            if (!in_array($rol, ['admin', 'operador'], true)) {
+            if (!in_array($rol, ['admin', 'operador', 'root'], true)) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Rol inválido. Usa: admin u operador']);
+                echo json_encode(['error' => 'Rol inválido. Usa: admin, operador o root']);
+                exit;
+            }
+            if ($rol === 'root' && !esRoot()) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Solo el superadministrador (root) puede crear cuentas root.']);
                 exit;
             }
             if (!validarUsername($username)) {
@@ -111,11 +116,30 @@ try {
                 echo json_encode(['error' => 'No puedes editar tu propia cuenta desde aquí. Usa "Mi cuenta".']);
                 exit;
             }
-            if (!in_array($rol, ['admin', 'operador'], true)) {
+            if (!in_array($rol, ['admin', 'operador', 'root'], true)) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Rol inválido. Usa: admin u operador']);
+                echo json_encode(['error' => 'Rol inválido. Usa: admin, operador o root']);
                 exit;
             }
+
+            // El objetivo actual
+            $stmtRolActual = $pdo->prepare('SELECT rol FROM usuarios WHERE id = :id');
+            $stmtRolActual->execute([':id' => $id]);
+            $rolActual = $stmtRolActual->fetch()['rol'] ?? '';
+
+            // Gestionar cuentas root solo está permitido para root
+            if ($rolActual === 'root' && !esRoot()) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Solo el superadministrador (root) puede gestionar cuentas root.']);
+                exit;
+            }
+            // Asignar el rol root solo está permitido para root
+            if ($rol === 'root' && !esRoot()) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Solo el superadministrador (root) puede asignar el rol root.']);
+                exit;
+            }
+
             if (!validarUsername($username)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Usuario inválido. Usa 3-50 caracteres: letras, números, punto o guion bajo.']);
@@ -169,6 +193,25 @@ try {
                 $stmtObjetivo->execute([':id' => $id]);
                 $rolObjetivo = $stmtObjetivo->fetch()['rol'] ?? null;
 
+                // Solo root puede desactivar cuentas root
+                if ($rolObjetivo === 'root' && !esRoot()) {
+                    http_response_code(403);
+                    echo json_encode(['error' => 'Solo el superadministrador (root) puede desactivar cuentas root.']);
+                    exit;
+                }
+
+                // Nunca dejar al sistema sin ningún root activo
+                if ($rolObjetivo === 'root') {
+                    $stmtRoot = $pdo->prepare("SELECT COUNT(*) AS c FROM usuarios WHERE rol = 'root' AND activo = 1");
+                    $stmtRoot->execute();
+                    $rootsActivos = (int)$stmtRoot->fetch()['c'];
+                    if ($rootsActivos <= 1) {
+                        http_response_code(409);
+                        echo json_encode(['error' => 'No puedes desactivar al último superadministrador (root) activo.']);
+                        exit;
+                    }
+                }
+
                 if ($rolObjetivo === 'admin' && $adminsActivos <= 1) {
                     http_response_code(409);
                     echo json_encode(['error' => 'No puedes desactivar al último administrador activo.']);
@@ -207,6 +250,24 @@ try {
                 http_response_code(404);
                 echo json_encode(['error' => 'Usuario no encontrado.']);
                 exit;
+            }
+
+            // Solo root puede eliminar cuentas root
+            if ($objetivo['rol'] === 'root' && !esRoot()) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Solo el superadministrador (root) puede eliminar cuentas root.']);
+                exit;
+            }
+
+            if ($objetivo['rol'] === 'root') {
+                $stmtRoot = $pdo->prepare("SELECT COUNT(*) AS c FROM usuarios WHERE rol = 'root' AND activo = 1");
+                $stmtRoot->execute();
+                $rootsActivos = (int)$stmtRoot->fetch()['c'];
+                if ($rootsActivos <= 1) {
+                    http_response_code(409);
+                    echo json_encode(['error' => 'No puedes eliminar al último superadministrador (root) activo.']);
+                    exit;
+                }
             }
 
             if ($objetivo['rol'] === 'admin') {

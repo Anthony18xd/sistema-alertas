@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 
 $titulo = 'Alertas';
+$esRoot = esRoot();
 
 // ── Filtros ────────────────────────────────────────────────
 $filtro       = $_GET['status'] ?? 'todos';
@@ -61,8 +62,8 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $alertas = $stmt->fetchAll();
 
-$extra_css = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">';
-$extra_js  = '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>';
+$extra_css = '<link rel="stylesheet" href="/assets/lib/leaflet/leaflet.css">';
+$extra_js  = '<script src="/assets/lib/leaflet/leaflet.js"></script>';
 
 include __DIR__ . '/../includes/header.php';
 $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
@@ -158,6 +159,11 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
                                             <i class="fas fa-check"></i> Completar
                                         </button>
                                     <?php endif; ?>
+                                    <?php if ($esRoot): ?>
+                                        <button class="btn btn-sm btn-outline-danger btn-eliminar" data-id="<?php echo (int)$a['id']; ?>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -211,6 +217,11 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
                 <button type="button" class="btn btn-success" id="btnCompletarModal" style="display:none;">
                     <i class="fas fa-check"></i> Marcar como completada
                 </button>
+                <?php if ($esRoot): ?>
+                <button type="button" class="btn btn-outline-danger" id="btnEliminarModal" style="display:none;">
+                    <i class="fas fa-trash"></i> Eliminar alerta
+                </button>
+                <?php endif; ?>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
@@ -270,6 +281,11 @@ $extra_js .= <<<'HTML'
                 document.getElementById('detNota').value = a.nota || '';
                 document.getElementById('detEnlaceGmaps').href = 'https://www.google.com/maps?q=' + a.latitud + ',' + a.longitud;
                 document.getElementById('btnCompletarModal').style.display = a.status === 'pendiente' ? '' : 'none';
+
+                var btnEliminarModalDet = document.getElementById('btnEliminarModal');
+                if (btnEliminarModalDet) {
+                    btnEliminarModalDet.style.display = '';
+                }
 
                 iniciarMapa();
                 var pos = [parseFloat(a.latitud), parseFloat(a.longitud)];
@@ -344,6 +360,34 @@ $extra_js .= <<<'HTML'
             .catch(function () { alert('Error de conexión'); });
         });
     });
+
+    // ── Eliminar alerta (solo root) ────────────────────
+    function eliminarAlerta(id) {
+        if (!confirm('¿Seguro que deseas ELIMINAR la alerta #' + id + '? Esta acción no se puede deshacer.')) return;
+        fetch('../api/eliminar_alerta.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ csrf_token: document.getElementById('detCsrf').value, id: parseInt(id, 10) })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) { location.reload(); }
+            else { alert(data.error || 'Error al eliminar'); }
+        })
+        .catch(function () { alert('Error de conexión'); });
+    }
+
+    document.querySelectorAll('.btn-eliminar').forEach(function (btn) {
+        btn.addEventListener('click', function () { eliminarAlerta(btn.dataset.id); });
+    });
+
+    var btnEliminarModal = document.getElementById('btnEliminarModal');
+    if (btnEliminarModal) {
+        btnEliminarModal.addEventListener('click', function () {
+            if (!alertaActual) return;
+            eliminarAlerta(alertaActual.id);
+        });
+    }
 
     // ── Exportar CSV ────────────────────────────────────
     document.getElementById('btnExportar').addEventListener('click', function () {

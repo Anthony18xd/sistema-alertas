@@ -42,7 +42,8 @@ if (!$usuario || !(int)$usuario['activo']) {
 $_SESSION['user_id']    = $usuario['id'];
 $_SESSION['username']   = $usuario['username'];
 $_SESSION['rol']        = $usuario['rol'];
-$_SESSION['user_admin'] = ($usuario['rol'] === 'admin');
+$_SESSION['user_admin'] = ($usuario['rol'] === 'admin' || $usuario['rol'] === 'root');
+$_SESSION['user_root']  = ($usuario['rol'] === 'root');
 
 // ── CSRF token (por si la sesión es anterior a esta función) ─
 if (empty($_SESSION['csrf_token'])) {
@@ -80,10 +81,18 @@ try {
 
 // ── Helpers de rol ───────────────────────────────────────
 /**
- * ¿El usuario actual es administrador?
+ * ¿El usuario actual es administrador (admin o superadministrador root)?
  */
 function esAdmin(): bool {
     return ($_SESSION['user_admin'] ?? false) === true;
+}
+
+/**
+ * ¿El usuario actual es el superadministrador (root)?
+ * Es el rol con máximo poder: puede eliminar alertas.
+ */
+function esRoot(): bool {
+    return ($_SESSION['user_root'] ?? false) === true;
 }
 
 /**
@@ -91,6 +100,16 @@ function esAdmin(): bool {
  */
 function requireAdmin(): void {
     if (!esAdmin()) {
+        header('Location: /views/dashboard.php');
+        exit;
+    }
+}
+
+/**
+ * Detiene la ejecución si el usuario no es el superadministrador (root).
+ */
+function requireRoot(): void {
+    if (!esRoot()) {
         header('Location: /views/dashboard.php');
         exit;
     }
