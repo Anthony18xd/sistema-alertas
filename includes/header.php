@@ -18,7 +18,8 @@
 <body>
 
 <div class="app-layout">
-    <aside class="sidebar">
+    <div class="backdrop-sidebar" id="backdropSidebar"></div>
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon"><img src="../assets/img/icono.png" alt="ALERTA"></div>
             <span class="brand-text"><?php echo htmlspecialchars($APLICACION['nombre_sistema'] ?? 'ALERTA'); ?></span>
@@ -76,7 +77,12 @@
 
     <div class="main-area">
         <header class="topbar">
-            <h5><?php echo $titulo ?? 'ALERTA'; ?></h5>
+            <div class="topbar-left">
+                <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h5><?php echo $titulo ?? 'ALERTA'; ?></h5>
+            </div>
             <div class="topbar-right">
                 <div class="dropdown dropdown-notif" id="notifDropdown">
                     <button class="btn btn-notif" type="button" data-bs-toggle="dropdown" aria-expanded="false">

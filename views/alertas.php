@@ -106,9 +106,16 @@ $csrf = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES);
             <div class="col-md-4 d-flex gap-2">
                 <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i> Filtrar</button>
                 <a href="alertas.php" class="btn btn-sm btn-outline-secondary">Limpiar</a>
-                <button type="button" class="btn btn-sm btn-outline-success" id="btnExportar">
-                    <i class="fas fa-file-csv"></i> Exportar CSV
-                </button>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" id="menuExportar">
+                        <li><button type="button" class="dropdown-item" data-formato="csv"><i class="fas fa-file-csv"></i> CSV</button></li>
+                        <li><button type="button" class="dropdown-item" data-formato="xlsx"><i class="fas fa-file-excel text-success"></i> Excel (.xlsx)</button></li>
+                        <li><button type="button" class="dropdown-item" data-formato="pdf"><i class="fas fa-file-pdf text-danger"></i> PDF (con gráfico)</button></li>
+                    </ul>
+                </div>
             </div>
         </form>
     </div>
@@ -389,8 +396,8 @@ $extra_js .= <<<'HTML'
         });
     }
 
-    // ── Exportar CSV ────────────────────────────────────
-    document.getElementById('btnExportar').addEventListener('click', function () {
+    // ── Exportar (CSV / Excel / PDF) ─────────────────────
+    function exportarAlertas(formato) {
         var form = document.getElementById('formExport');
         if (!form) {
             form = document.createElement('form');
@@ -405,6 +412,7 @@ $extra_js .= <<<'HTML'
         var parametros = new URLSearchParams(location.search);
         var nombres = {
             csrf_token: document.getElementById('detCsrf').value,
+            formato: formato,
             status: parametros.get('status') || 'todos',
             q: parametros.get('q') || '',
             dispositivo: parametros.get('dispositivo') || '',
@@ -419,6 +427,13 @@ $extra_js .= <<<'HTML'
             form.appendChild(inp);
         });
         form.submit();
+    }
+
+    document.querySelectorAll('#menuExportar .dropdown-item').forEach(function (item) {
+        item.addEventListener('click', function (e) {
+            e.preventDefault();
+            exportarAlertas(item.dataset.formato);
+        });
     });
 })();
 </script>

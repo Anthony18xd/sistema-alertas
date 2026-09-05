@@ -8,6 +8,10 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/actividad.php';
+require_once __DIR__ . '/../includes/reporte.php';
+
+// Las descargas son binarias: nunca volcar warnings/deprecados al cuerpo
+@ini_set('display_errors', '0');
 
 // ── CSRF ─────────────────────────────────────────────────
 $csrf = $_POST['csrf_token'] ?? '';
@@ -16,6 +20,12 @@ if (empty($csrf) || !hash_equals($_SESSION['csrf_token'] ?? '', $csrf)) {
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Token CSRF inválido']);
     exit;
+}
+
+// ── Formato de salida ────────────────────────────────────
+$formato = $_POST['formato'] ?? 'csv';
+if (!in_array($formato, ['csv', 'xlsx', 'pdf'], true)) {
+    $formato = 'csv';
 }
 
 // ── Filtros (idénticos a views/alertas.php) ──────────────
@@ -71,9 +81,79 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $alertas = $stmt->fetchAll();
 
-registrarActividad('exportar_csv', count($alertas) . ' alertas');
+registrarActividad('exportar_' . $formato, count($alertas) . ' alertas');
 
-// ── Cabeceras de descarga ────────────────────────────────
+// ── Reportes Excel y PDF (con gráfico de uso) ─────────────
+if ($formato === 'xlsx' || $formato === 'pdf') {
+    $uso = reporte_uso_diario($pdo, $cond, $params);
+
+    $total    = count($alertas);
+    $pend     = 0;
+    foreach ($alertas as $a) {
+        if ($a['status'] === 'pendiente') $pend++;
+    }
+    $comp       = $total - $pend;
+    $dispositivos = count(array_unique(array_column($alertas, 'dispositivo')));
+
+    $resumen = [
+        'total'        => $total,
+        'pendientes'   => $pend,
+        'completados'  => $comp,
+        'dispositivos' => $dispositivos,
+        'usuario'      => $_SESSION['username'] ?? '',
+        'desde'        => $uso['desde'],
+        'hasta'        => $uso['hasta'],
+    ];
+
+    $encabezados = [
+        'ID', 'Dispositivo', 'Número', 'Batería (%)', 'Fecha y hora',
+        'Latitud', 'Longitud', 'Estado', 'Nota', 'Completado por',
+    ];
+    $filas = [];
+    foreach ($alertas as $a) {
+        $filas[] = [
+            $a['id'],
+            $a['dispositivo'],
+            $a['numero'],
+            $a['bateria'],
+            $a['fecha_hora'],
+            $a['latitud'],
+            $a['longitud'],
+            $a['status'],
+            $a['nota'] ?? '',
+            $a['completado_por'] ?? '',
+        ];
+    }
+
+    $nombreBase = 'reporte_alertas_' . date('Ymd_His');
+
+    if ($formato === 'xlsx') {
+        $bin = reporte_xlsx('REPORTE DE ALERTAS — ALERTA', $encabezados, $filas, $uso['dias'], $resumen);
+        if ($bin === '') {
+            http_response_code(500);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'No se pudo generar el archivo Excel']);
+            exit;
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $nombreBase . '.xlsx"');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        echo $bin;
+        exit;
+    }
+
+    // PDF
+    $bin = reporte_pdf('REPORTE DE ALERTAS — ALERTA', $encabezados, $filas, $uso['dias'], $resumen);
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="' . $nombreBase . '.pdf"');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+    echo $bin;
+    exit;
+}
+
+// ── Cabeceras de descarga (CSV) ───────────────────────────
 $fecha = date('Ymd_His');
 $nombre = 'alertas_' . $fecha . '.csv';
 

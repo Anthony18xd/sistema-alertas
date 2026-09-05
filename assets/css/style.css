@@ -620,65 +620,193 @@ body.login-page {
     margin-bottom: 6px;
 }
 
+/* ===== MENU TOGGLE (MÓVIL) ===== */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    padding: 6px 10px;
+    margin-right: 6px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.menu-toggle:focus {
+    outline: none;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+/* ===== BACKDROP SIDEBAR ===== */
+.backdrop-sidebar {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 1040;
+}
+
+.backdrop-sidebar.visible {
+    display: block;
+}
+
+/* ===== BANNER DE ALARMA ===== */
+.alarma-banner {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 18px;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #dc2626;
+    color: #fff;
+    padding: 12px 18px;
+    box-shadow: 0 6px 24px rgba(220, 38, 38, 0.5);
+    animation: alarma-pulso 1s ease-in-out infinite;
+    max-width: calc(100vw - 24px);
+}
+
+.alarma-banner .alarma-banner-ic {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.alarma-banner .alarma-banner-txt {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.alarma-banner .alarma-banner-txt strong {
+    font-size: 0.85rem;
+}
+
+.alarma-banner .alarma-banner-txt span {
+    font-size: 0.78rem;
+    opacity: 0.92;
+}
+
+.alarma-banner .btn-light {
+    color: #dc2626;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+@keyframes alarma-pulso {
+    0%, 100% { box-shadow: 0 6px 24px rgba(220, 38, 38, 0.5); }
+    50% { box-shadow: 0 6px 34px rgba(220, 38, 38, 0.9); }
+}
+
 /* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .sidebar {
-        width: 60px;
-    }
-
-    .sidebar .brand-text,
-    .sidebar .nav-item span,
-    .sidebar .user-info span {
-        display: none;
-    }
-
-    .sidebar-brand {
-        justify-content: center;
-        padding: 16px 8px;
-    }
-
-    .sidebar-nav {
-        padding: 8px 6px;
-    }
-
-    .sidebar-nav .nav-item {
-        justify-content: center;
-        padding: 12px 8px;
-    }
-
-    .sidebar-nav .nav-item i {
-        margin: 0;
-    }
-
-    .sidebar-footer .user-info {
-        justify-content: center;
-        padding: 10px 8px;
-    }
-
-    .sidebar-footer .nav-item {
-        justify-content: center;
-    }
-
-    .main-area {
-        margin-left: 60px;
-    }
-
-    .topbar {
-        padding: 12px 16px;
-    }
-
+@media (max-width: 992px) {
     .content {
-        padding: 16px;
+        padding: 18px 20px;
     }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
+    .menu-toggle {
+        display: inline-flex;
+    }
+
     .sidebar {
-        width: 0;
-        overflow: hidden;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        width: 260px;
+        box-shadow: none;
+        z-index: 1050;
+    }
+
+    .sidebar.abierta {
+        transform: translateX(0);
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
     }
 
     .main-area {
         margin-left: 0;
+    }
+
+    .topbar {
+        padding: 10px 12px;
+        min-height: 56px;
+    }
+
+    .topbar h5 {
+        font-size: 0.95rem;
+        max-width: 45vw;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topbar .topbar-right {
+        gap: 6px;
+    }
+
+    .topbar .topbar-right .user-badge {
+        font-size: 0.75rem;
+    }
+
+    .content {
+        padding: 14px;
+    }
+
+    .notif-menu {
+        width: auto;
+        max-width: calc(100vw - 20px);
+    }
+
+    .login-card .card-body {
+        padding: 32px 22px;
+    }
+
+    .card-header {
+        padding: 12px 16px;
+    }
+
+    .card-body {
+        padding: 16px;
+    }
+
+    .table thead th {
+        font-size: 0.68rem;
+        padding: 10px 10px;
+    }
+
+    .table tbody td {
+        padding: 10px;
+    }
+
+    .stat-card {
+        padding: 16px;
+        gap: 14px;
+    }
+
+    .stat-card .stat-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+    }
+
+    .stat-card .stat-info h2 {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .side-brand .brand-text {
+        font-size: 1rem;
+    }
+
+    .topbar .topbar-right .user-badge {
+        display: none;
     }
 }
